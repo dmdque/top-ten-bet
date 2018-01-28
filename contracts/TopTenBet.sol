@@ -110,7 +110,7 @@ contract TopTenBet {
       isAliceFunded = true;
       return true;
     } else if (msg.sender == bob) {
-      balances[alice] += msg.value;
+      balances[bob] += msg.value;
       isBobFunded = true;
       return true;
     } else {
