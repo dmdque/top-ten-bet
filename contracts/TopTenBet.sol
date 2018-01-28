@@ -144,13 +144,15 @@ contract TopTenBet {
       return false;
     }
     if (winner == alice) {
-      if (alice.send(this.balance)) {
-        balances[alice] = 0;
-      }
+      alice.transfer(this.balance);
+      balances[alice] = 0;
+      balances[bob] = 0;
+      return true;
     } else if (winner == bob) {
-      if (bob.send(this.balance)) {
-        balances[bob] = 0;
-      }
+      bob.transfer(this.balance);
+      balances[alice] = 0;
+      balances[bob] = 0;
+      return true;
     }
   }
 
@@ -213,6 +215,9 @@ contract TopTenBet {
   }
 
   // TODO: kill and refund functions
+  // For refund function, keep in mind that this.balance can be nonzero if
+  // someone sent funds to this contract to avoid them being locked up forever,
+  // return them to owner
 
   // --
   // Tools
