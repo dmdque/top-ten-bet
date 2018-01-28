@@ -3,8 +3,6 @@
 // TODO:
 // - make payout go directly to charity addresses
 //   - add state variable and modify setup with charity addresses
-// Notes:
-// - prepend _ to state variables
 
 pragma solidity ^0.4.17;
 
@@ -12,21 +10,21 @@ pragma solidity ^0.4.17;
 
 contract TopTenBet {
 
-  mapping (address => uint) public _balances;
-  address public _owner = msg.sender;
+  mapping (address => uint) public balances;
+  address public owner = msg.sender;
   // pros of storing as address[2] bettors?
-  address public _alice;
-  address public _bob;
+  address public alice;
+  address public bob;
   // initialized as false
-  // other good names: _arePuntersSetup or _isBettorSetup?
+  // other good names: arePuntersSetup or isBettorSetup?
   // https://english.stackexchange.com/questions/221086/what-do-you-call-a-person-placing-bets?newreg=fd96d96dafa344abac3f0b64e9ff4e78
-  bool public _isBettorSetup;
-  bool public _isOracleSetup;
-  // could remove these in favour of simple if statement that _balances are nonzero
-  bool public _isAliceFunded;
-  bool public _isBobFunded;
-  address[5] _oracles;
-  uint _endDate;
+  bool public isBettorSetup;
+  bool public isOracleSetup;
+  // could remove these in favour of simple if statement that balances are nonzero
+  bool public isAliceFunded;
+  bool public isBobFunded;
+  address[5] oracles;
+  uint endDate;
 
   //modifier isOwner {
     //msg.sender == owner
@@ -38,70 +36,70 @@ contract TopTenBet {
   // or an enum can be supplied in setup()
   // or enum can be supplied in bet(), but would have to check it's valid ie. they're not betting the same thing
   function setup(
-    address alice,
-    address bob,
-    address oracle1,
-    address oracle2,
-    address oracle3,
-    address oracle4,
-    address oracle5,
-    uint endDate,
+    address _alice,
+    address _bob,
+    address _oracle1,
+    address _oracle2,
+    address _oracle3,
+    address _oracle4,
+    address _oracle5,
+    uint _endDate,
   ) public {
-    setupBettors(alice, bob);
-    setupOracles(oracle1, oracle2, oracle3, oracle4, oracle5);
-    _endDate = endDate;
-    _isEndDateSetup = true;
+    setupBettors(_alice, _bob);
+    setupOracles(_oracle1, _oracle2, _oracle3, _oracle4, _oracle5);
+    endDate = _endDate;
+    isEndDateSetup = true;
   }
 
   function isSetup() {
-    return _isBettorSetup && _isOracleSetup && _isEndDateSetup;
+    return isBettorSetup && isOracleSetup && isEndDateSetup;
   }
 
   // need better name
   // bascially is everything ready
   function isValid() {
-    return isSetup() && _isAliceFunded && _isBobFunded;
+    return isSetup() && isAliceFunded && isBobFunded;
   }
 
   // only alice and bob can participate
-  function setupBettors(address alice, address bob) public {
+  function setupBettors(address _alice, address _bob) public {
     require isOwner(msg.sender) {
-      _alice = alice;
-      _bob = bob;
-      _isBettorSetup = true;
+      alice = _alice;
+      bob = _bob;
+      isBettorSetup = true;
     }
   }
 
   // can this accept an array address[4] instead?
   function setupOracles(
-    address oracle1,
-    address oracle2,
-    address oracle3,
-    address oracle4,
-    address oracle5,
+    address _oracle1,
+    address _oracle2,
+    address _oracle3,
+    address _oracle4,
+    address _oracle5,
   ) public {
     // todo: check that none of these addresses are "0x0"
     // check that they're all unique (not required)
     //   actually kinda required since if there's a collision, only the
     //   one that appears first will get to vote, due to sequence of ifs
     // check that none are the same as alice or bob
-    oracles[0] = oracle1;
-    oracles[1] = oracle2;
-    oracles[2] = oracle3;
-    oracles[3] = oracle4;
-    oracles[4] = oracle5;
-    _isOracleSetup = true;
+    oracles[0] = _oracle1;
+    oracles[1] = _oracle2;
+    oracles[2] = _oracle3;
+    oracles[3] = _oracle4;
+    oracles[4] = _oracle5;
+    isOracleSetup = true;
   }
 
   // what should this return?
   // could add state variable set in setup, and check so that both bettors bet the same amount
   function bet() public payable {
-    if (msg.sender == _alice) {
-      _balances[_alice] += msg.value;
-      _isAliceFunded = true;
-    } else if (msg.sender == _bob) {
-      _balances[_alice] += msg.value;
-      _isBobFunded = true;
+    if (msg.sender == alice) {
+      balances[alice] += msg.value;
+      isAliceFunded = true;
+    } else if (msg.sender == bob) {
+      balances[alice] += msg.value;
+      isBobFunded = true;
     } else {
       throw;  // todo: this is outdated
     }
@@ -110,7 +108,7 @@ contract TopTenBet {
   // is there a way to auto trigger this once the time has elapsed?
   function settle() {
     // do a bunch of checks
-    if (now < _endDate) {
+    if (now < endDate) {
       revert;  // is this right?
     }
     if (!isValid()) {
@@ -122,13 +120,13 @@ contract TopTenBet {
       throw;
     }
     address winner = determineWinner();
-    if (winner == _alice) {
-      if (_alice.send(this.balance)) {
-        _balances[_alice] = 0;
+    if (winner == alice) {
+      if (alice.send(this.balance)) {
+        balances[alice] = 0;
       }
-    } else if (winner == _bob) {
-      if (_bob.send(this.balance)) {
-        _balances[_bob] = 0;
+    } else if (winner == bob) {
+      if (bob.send(this.balance)) {
+        balances[bob] = 0;
       }
     } else {
       // dunno wat
