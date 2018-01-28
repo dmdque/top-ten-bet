@@ -135,14 +135,32 @@ contract TopTenBet {
     }
   }
 
-  // check winner
-  function determineWinner() (bool haveAllOraclesVoted, address winner) {
+  // Checks who the winner is
+  // Returns the winner's address
+  // TODO: return the winner's charity's address
+  function determineWinner() (bool isSuccess, address winner) {
     if (!haveAllOraclesVoted()) {
       return (false, address(0));
+    }
+    uint _aliceVoteCount = 0;
+    uint _bobVoteCount = 0;
+    for (uint i = 0; i < oracleVotes; i++) {
+      if (oracleVotes[i] == VoteOption.Alice) {
+        _aliceVoteCount += 1;
+      } else if (oracleVotes[i] == VoteOption.Bob) {
+        _bobVoteCount += 1;
+      }
+    }
+    // Assumes there can be no ties since there are an odd number of oracles
+    if (_aliceVoteCount > _bobVoteCount) {
+      return (true, alice);
+    } else if (_bobVoteCount > _aliceVoteCount) {
+      return (true, bob);
     }
   }
 
   // Checks if all oracles voted
+  // Returns whether all oracles have voted
   function haveAllOraclesVoted() bool {
     for (uint i = 0; i < haveOraclesVoted.length; i++) {
       if(!haveOraclesVoted[i]) {
@@ -154,6 +172,7 @@ contract TopTenBet {
 
   // Allow oracles to vote for Alice or Bob
   // Oracles can only vote once
+  // Returns whether vote was successfully recorded
   function oracleVote(VoteOption _vote) (bool isSuccess) {
     (bool _isContained, uint _index) = arrayVoteOptionsContains(oracleVotes, _vote);
     if (!_isContained) {
@@ -170,6 +189,8 @@ contract TopTenBet {
 
   // --
   // Tools
+  // Checks if item is contained in array
+  // Returns whether item is contained in array
   function arrayVoteOptionsContains(VoteOption[5] _oracleVotes, VoteOption _vote) (bool isContained, uint index) {
     for (uint i = 0; i < _oracleVotes.length; i++) {
       if (_oracleVotes[i] == vote) {
