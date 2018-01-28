@@ -7,7 +7,10 @@
 pragma solidity ^0.4.17;
 
 
+// Usage
+// setup() -> bet() -> bet() -> wait -> settle()
 contract TopTenBet {
+
 
   mapping (address => uint) public balances;
   address public owner = msg.sender;
@@ -18,6 +21,8 @@ contract TopTenBet {
   bool public isAliceFunded;
   bool public isBobFunded;
   uint public endDate;
+  // this should probably be a mapping instead
+  // mapping (address => bool, VoteOption) public
   address[5] public oracles;
   bool[5] public haveOraclesVoted;  // still not sure about "is" naming convention for bools
   enum VoteOption {Alice, Bob}
@@ -104,6 +109,7 @@ contract TopTenBet {
   // Allows bettors to make their bets
   // todo: add state variable set in setup to check that both bettors bet the same amount
   // is it good practice to return isSuccess?
+  // todo: should I limit betting to only once?
   function bet() public payable returns (bool isSuccess) {
     if (msg.sender == alice) {
       balances[alice] += msg.value;
@@ -152,6 +158,8 @@ contract TopTenBet {
   // Returns the winner's address
   // TODO: return the winner's charity's address
   function determineWinner() returns (bool isSuccess, address winner) {
+    // TODO: doesn't necessarily need all votes if a majority is already reached
+
     if (!haveAllOraclesVoted()) {
       return (false, address(0));
     }
@@ -189,7 +197,9 @@ contract TopTenBet {
   function oracleVote(VoteOption _vote) returns (bool isSuccess) {
     bool _isContained;
     uint _index;
-    (_isContained, _index) = arrayVoteOptionsContains(oracleVotes, _vote);
+    // this can be simplified with a mapping from oracles to whether they voted
+    // and the vote
+    (_isContained, _index) = arrayVoteOptionsContains(oracles, msg.sender);
     if (!_isContained) {
       return false;
     }
@@ -209,11 +219,11 @@ contract TopTenBet {
   // Checks if item is contained in array
   // Returns whether item is contained in array
   function arrayVoteOptionsContains(
-    VoteOption[5] _oracleVotes,
-    VoteOption _vote
+    address[5] _oracles,
+    address _oracle
   ) returns (bool isContained, uint index) {
-    for (uint i = 0; i < _oracleVotes.length; i++) {
-      if (_oracleVotes[i] == _vote) {
+    for (uint i = 0; i < _oracles.length; i++) {
+      if (_oracles[i] == _oracle) {
         return (true, i);
       }
     }
