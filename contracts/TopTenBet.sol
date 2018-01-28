@@ -23,8 +23,11 @@ contract TopTenBet {
   // could remove these in favour of simple if statement that balances are nonzero
   bool public isAliceFunded;
   bool public isBobFunded;
-  address[5] oracles;
   uint endDate;
+  address[5] oracles;
+  bool[5] haveOraclesVoted;  // still not sure about "is" naming convention for bools
+  enum VoteOption {Alice, Bob};
+  VoteOption[5] oracleVotes;
 
   //modifier isOwner {
     //msg.sender == owner
@@ -91,35 +94,34 @@ contract TopTenBet {
     isOracleSetup = true;
   }
 
-  // what should this return?
   // could add state variable set in setup, and check so that both bettors bet the same amount
-  function bet() public payable {
+  // is it good practice to return isSuccess?
+  function bet() public payable (bool isSuccess) {
     if (msg.sender == alice) {
       balances[alice] += msg.value;
       isAliceFunded = true;
+      return true;
     } else if (msg.sender == bob) {
       balances[alice] += msg.value;
       isBobFunded = true;
+      return true;
     } else {
-      throw;  // todo: this is outdated
+      return false;
     }
   }
 
   // is there a way to auto trigger this once the time has elapsed?
-  function settle() {
+  function settle() (bool isSuccess) {
     // do a bunch of checks
     if (now < endDate) {
-      revert;  // is this right?
+      return false;
     }
     if (!isValid()) {
-      // return money to owners
-      // and halt
-      throw;
+      // in this case, alice and bob should check to ensure things are set up
+      // properly, or have the contract owner refund and cancel the contract
+      return false;
     }
-    if (!isOraclesVoted()) {
-      throw;
-    }
-    address winner = determineWinner();
+    (bool haveAllOraclesVoted, address winner) = determineWinner();
     if (winner == alice) {
       if (alice.send(this.balance)) {
         balances[alice] = 0;
@@ -134,14 +136,47 @@ contract TopTenBet {
   }
 
   // check winner
-  function determineWinner() {
-    // oracle magic
-    // oracles can only vote after time has elapsed
+  function determineWinner() (bool haveAllOraclesVoted, address winner) {
+    if (!haveAllOraclesVoted()) {
+      return (false, address(0));
+    }
   }
 
-  // have all oracles voted
-  function isOraclesVoted() bool {
-    // todo
+  // Checks if all oracles voted
+  function haveAllOraclesVoted() bool {
+    for (uint i = 0; i < haveOraclesVoted.length; i++) {
+      if(!haveOraclesVoted[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Allow oracles to vote for Alice or Bob
+  // Oracles can only vote once
+  function oracleVote(VoteOption _vote) (bool isSuccess) {
+    (bool _isContained, uint _index) = arrayVoteOptionsContains(oracleVotes, _vote);
+    if (!_isContained) {
+      return false;
+    }
+    bool _hasOracleVoted = haveOraclesVoted[_index];
+    if (_hasOracleVoted) {
+      return false;
+    }
+    oracleVotes[_index] = vote;
+    haveOraclesVoted[_index] = true;
+    return true;
+  }
+
+  // --
+  // Tools
+  function arrayVoteOptionsContains(VoteOption[5] _oracleVotes, VoteOption _vote) (bool isContained, uint index) {
+    for (uint i = 0; i < _oracleVotes.length; i++) {
+      if (_oracleVotes[i] == vote) {
+        return (true, i);
+      }
+    }
+    return (false, 0);  // is it possible to not return a value, and have it default to zero-values? ie. return (false, )
   }
 
 }
