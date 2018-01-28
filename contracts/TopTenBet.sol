@@ -6,7 +6,6 @@
 
 pragma solidity ^0.4.17;
 
-// does it have to be exactly 10 ETH?
 
 contract TopTenBet {
 
@@ -15,24 +14,21 @@ contract TopTenBet {
   // pros of storing as address[2] bettors?
   address public alice;
   address public bob;
-  // initialized as false
-  // other good names: arePuntersSetup or isBettorSetup?
-  // https://english.stackexchange.com/questions/221086/what-do-you-call-a-person-placing-bets?newreg=fd96d96dafa344abac3f0b64e9ff4e78
-  bool public isBettorSetup;
-  bool public isOracleSetup;
   // could remove these in favour of simple if statement that balances are nonzero
   bool public isAliceFunded;
   bool public isBobFunded;
-  uint endDate;
-  address[5] oracles;
-  bool[5] haveOraclesVoted;  // still not sure about "is" naming convention for bools
+  bool public areBettorsSetup;
+  bool public areOraclesSetup;
+  uint public endDate;
+  address[5] public oracles;
+  bool[5] public haveOraclesVoted;  // still not sure about "is" naming convention for bools
   enum VoteOption {Alice, Bob};
-  VoteOption[5] oracleVotes;
+  VoteOption[5] public oracleVotes;
 
-  //modifier isOwner {
-    //msg.sender == owner
-    //_;
-  //}
+   modifier onlyOwner {
+      require(msg.sender == owner);
+      _;
+   }
 
   // need a way for them to choose which side of the bet they're on
   // -> this can be hardcoded: alice always bets outcome A
@@ -47,7 +43,7 @@ contract TopTenBet {
     address _oracle4,
     address _oracle5,
     uint _endDate,
-  ) public {
+  ) public onlyOwner {
     setupBettors(_alice, _bob);
     setupOracles(_oracle1, _oracle2, _oracle3, _oracle4, _oracle5);
     endDate = _endDate;
@@ -55,7 +51,7 @@ contract TopTenBet {
   }
 
   function isSetup() {
-    return isBettorSetup && isOracleSetup && isEndDateSetup;
+    return areBettorsSetup && areOraclesSetup && isEndDateSetup;
   }
 
   // need better name
@@ -69,7 +65,7 @@ contract TopTenBet {
     require isOwner(msg.sender) {
       alice = _alice;
       bob = _bob;
-      isBettorSetup = true;
+      areBettorsSetup = true;
     }
   }
 
@@ -91,10 +87,11 @@ contract TopTenBet {
     oracles[2] = _oracle3;
     oracles[3] = _oracle4;
     oracles[4] = _oracle5;
-    isOracleSetup = true;
+    areOraclesSetup = true;
   }
 
-  // could add state variable set in setup, and check so that both bettors bet the same amount
+  // Allows bettors to make their bets
+  // todo: add state variable set in setup to check that both bettors bet the same amount
   // is it good practice to return isSuccess?
   function bet() public payable (bool isSuccess) {
     if (msg.sender == alice) {
@@ -110,9 +107,11 @@ contract TopTenBet {
     }
   }
 
+  // Settles the bet between alice and bob by counting votes made by oracles
+  // Returns whether the settle is a success
   // is there a way to auto trigger this once the time has elapsed?
   function settle() (bool isSuccess) {
-    // do a bunch of checks
+    // Perform checks, in order of increasing cost
     if (now < endDate) {
       return false;
     }
@@ -121,7 +120,10 @@ contract TopTenBet {
       // properly, or have the contract owner refund and cancel the contract
       return false;
     }
-    (bool haveAllOraclesVoted, address winner) = determineWinner();
+    (bool _isSuccess, address winner) = determineWinner();
+    if (!_isSuccess) {
+      return false;
+    }
     if (winner == alice) {
       if (alice.send(this.balance)) {
         balances[alice] = 0;
@@ -130,8 +132,6 @@ contract TopTenBet {
       if (bob.send(this.balance)) {
         balances[bob] = 0;
       }
-    } else {
-      // dunno wat
     }
   }
 
@@ -186,6 +186,8 @@ contract TopTenBet {
     haveOraclesVoted[_index] = true;
     return true;
   }
+
+  // TODO: kill and refund functions
 
   // --
   // Tools
