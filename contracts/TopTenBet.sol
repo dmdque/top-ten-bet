@@ -1,22 +1,24 @@
-// Bet that top 10 market cap will shift by next year.
-
-// TODO:
-// - make payout go directly to charity addresses
-//   - add state variable and modify setup with charity addresses
-
 pragma solidity ^0.4.17;
 
 
+import 'contracts/ownership/Ownable.sol';
+
+
+// Bet that top 10 market cap will shift by next year.
+// TODO:
+// - make payout go directly to charity addresses
+//   - add state variable and modify setup with charity addresses
 // Usage
 // setup() -> bet() -> bet() -> wait -> settle()
-contract TopTenBet {
-
+// is Ownable
+contract TopTenBet is Ownable {
 
   mapping (address => uint) public balances;
-  address public owner = msg.sender;
   // pros of storing as address[2] bettors?
   address public alice;
   address public bob;
+  address public payoutA;
+  address public payoutB;
   // could remove these in favour of simple if statement that balances are nonzero
   bool public isAliceFunded;
   bool public isBobFunded;
@@ -31,20 +33,16 @@ contract TopTenBet {
   bool public isEndDateSetup;
   bool public areOraclesSetup;
 
-  // Requires that function is being called by contract owner
-  modifier onlyOwner {
-    require(msg.sender == owner);
-    _;
-  }
-
   // Sets up the bet by setting up bettors, oracles, and end date
   // need a way for them to choose which side of the bet they're on
   // -> this can be hardcoded: alice always bets outcome A
   // or an enum can be supplied in setup()
   // or enum can be supplied in bet(), but would have to check it's valid ie. they're not betting the same thing
-  function setup(
+  function TopTenBet(
     address _alice,
     address _bob,
+    address _payoutA,
+    address _payoutB,
     address _oracle1,
     address _oracle2,
     address _oracle3,
@@ -52,7 +50,7 @@ contract TopTenBet {
     address _oracle5,
     uint _endDate
   ) public onlyOwner {
-    setupBettors(_alice, _bob);
+    setupBettors(_alice, _bob, _payoutA, _payoutB);
     setupOracles(_oracle1, _oracle2, _oracle3, _oracle4, _oracle5);
     setupEndDate(_endDate);
   }
@@ -60,10 +58,11 @@ contract TopTenBet {
 
   // Sets up bettors with their addresses and sets areBettorsSetup to true
   // only alice and bob can participate
-  // todo: setup charity addresses
-  function setupBettors(address _alice, address _bob) public onlyOwner {
+  function setupBettors(address _alice, address _bob, address _payoutA, address payoutB) public onlyOwner {
     alice = _alice;
     bob = _bob;
+    payoutA = _payoutA;
+    payoutB = _payoutB;
     areBettorsSetup = true;
   }
 
@@ -144,12 +143,12 @@ contract TopTenBet {
       return false;
     }
     if (winner == alice) {
-      alice.transfer(this.balance);
+      payoutA.transfer(this.balance);
       balances[alice] = 0;
       balances[bob] = 0;
       return true;
     } else if (winner == bob) {
-      bob.transfer(this.balance);
+      payoutB.transfer(this.balance);
       balances[alice] = 0;
       balances[bob] = 0;
       return true;
