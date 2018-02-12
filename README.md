@@ -18,17 +18,21 @@ Automated tests are in progress, but a manual integration test can be run. Note,
     $ truffle console
     >
     TopTenBet.deployed().then(instance => ttb = instance)
-    ttb.setup("0xf17f52151ebef6c7334fad080c5704d77216b732", "0xc5fdf4076b8f3a5357c5e395ab970b5b54098fef", "0x821aea9a577a9b44299b9c15c88cf3087f3b5544", "0x0d1d4e623d10f9fba5db95830f7d3839406c6af2", "0x2932b7a2355d6fecc4b5c0b6bd44cc31df247a2e", "0x2191ef87e392377ec08e7c08eb105ef5448eced5", "0x0f4f2ac550a1b4e2280d04c21cea7ebd822934b5", 1517133054)
-    ttb.bet({from: "0xf17f52151EbEF6C7334FAD080c5704D77216b732", value: 10*10**18})
-    ttb.bet({from: "0xC5fdf4076b8F3A5357c5E395ab970B5B54098Fef", value: 10*10**18})
+    ttb.fund({from: "0xf17f52151EbEF6C7334FAD080c5704D77216b732", value: 10*10**18, gas: 10000000000})
+    ttb.fund({from: "0xC5fdf4076b8F3A5357c5E395ab970B5B54098Fef", value: 10*10**18})
 
-    ttb.oracleVote(0, {from: "0x821aEa9a577a9b44299B9c15c88cf3087F3b5544"})
-    ttb.oracleVote(1, {from: "0x0d1d4e623D10F9FBA5Db95830F7d3839406C6AF2"})
     ttb.oracleVote(0, {from: "0x2932b7A2355D6fecc4b5c0B6BD44cC31df247a2e"})
     ttb.oracleVote(0, {from: "0x2191eF87E392377ec08E7c08Eb105Ef5448eCED5"})
-    ttb.oracleVote(0, {from: "0x0F4F2Ac550A1b4e2280d04c21cEa7EBD822934b5"})
+    ttb.oracleVote(1, {from: "0x0F4F2Ac550A1b4e2280d04c21cEa7EBD822934b5"})
 
-    // checks
-    // ttb.haveAllOraclesVoted.call()
-    // ttb.determineWinner.call()
-    ttb.settle()
+    ttb.payout()
+
+    // Other tests
+    ttb.personalAbort({from: "0xf17f52151EbEF6C7334FAD080c5704D77216b732"})
+
+
+## Usage
+
+## Documentation
+### expiryDate
+After the `expiryDate`, both bettors can call `personalAbort()` to recover their funds. Please note that after the expiry date, a bettor that knows they've lost the vote can call `personalAbort()` to recover their funds. Both parties must be vigilant about calling `payout()` after `endDate` and before `expiryDate`.
