@@ -41,6 +41,7 @@ contract TopTenBet is Ownable {
   uint public expiryDate;
   State public state;
 
+  event LogUInt(uint n);
 
   modifier onlyBettor() {
     require(msg.sender == alice || msg.sender == bob);
@@ -159,9 +160,9 @@ contract TopTenBet is Ownable {
     for (uint i = 0; i < oracles.length; i++) {
       address currentOracle = oracles[i];
       if (oracleVotes[currentOracle].vote == VoteOption.Alice) {
-        _aliceVoteCount.add(1);
+         _aliceVoteCount = _aliceVoteCount.add(1);
       } else if (oracleVotes[currentOracle].vote == VoteOption.Bob) {
-        _bobVoteCount.add(1);
+        _bobVoteCount = _bobVoteCount.add(1);
       }
     }
     // Outcome is binary since there's an odd number of oracles
