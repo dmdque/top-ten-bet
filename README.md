@@ -18,12 +18,12 @@ Automated tests are in progress, but a manual integration test can be run. Note,
     $ truffle console
     >
     TopTenBet.deployed().then(instance => ttb = instance)
-    ttb.fund({from: "0xf17f52151EbEF6C7334FAD080c5704D77216b732", value: 10*10**18, gas: 10000000000})
+    ttb.fund({from: "0xf17f52151EbEF6C7334FAD080c5704D77216b732", value: 10*10**18})
     ttb.fund({from: "0xC5fdf4076b8F3A5357c5E395ab970B5B54098Fef", value: 10*10**18})
 
     ttb.oracleVote(0, {from: "0x2932b7A2355D6fecc4b5c0B6BD44cC31df247a2e"})
     ttb.oracleVote(0, {from: "0x2191eF87E392377ec08E7c08Eb105Ef5448eCED5"})
-    ttb.oracleVote(1, {from: "0x0F4F2Ac550A1b4e2280d04c21cEa7EBD822934b5"})
+    ttb.oracleVote(0, {from: "0x0F4F2Ac550A1b4e2280d04c21cEa7EBD822934b5"})
 
     ttb.payout()
 
@@ -34,5 +34,10 @@ Automated tests are in progress, but a manual integration test can be run. Note,
 ## Usage
 
 ## Documentation
+The state machine is as follows:
+
+    setup -> fund -> (implicit wait) -> vote -> payout -> end
+
+
 ### expiryDate
 After the `expiryDate`, both bettors can call `personalAbort()` to recover their funds. Please note that after the expiry date, a bettor that knows they've lost the vote can call `personalAbort()` to recover their funds. Both parties must be vigilant about calling `payout()` after `endDate` and before `expiryDate`.
