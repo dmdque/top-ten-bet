@@ -8,6 +8,7 @@ import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 // TODO:
 // - make oracles dynamic array
 // - do mappings take more storage space than 3 arrays?
+// - events
 
 // Bet that top 10 market cap will shift by next year.
 contract TopTenBet is Ownable {
@@ -38,7 +39,7 @@ contract TopTenBet is Ownable {
   uint public betAmount;
   uint public endDate;
   uint public expiryDate;
-  State state;
+  State public state;
 
 
   modifier onlyBettor() {
@@ -54,7 +55,7 @@ contract TopTenBet is Ownable {
   }
 
   modifier onlyAfterEndDate() {
-    require(now < endDate);
+    require(now > endDate);
     _;
   }
 
