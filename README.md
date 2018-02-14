@@ -11,7 +11,12 @@ https://tokeneconomy.co/token-economy-30-gazing-into-the-crypstal-ball-3a02cf9fe
 > Yannick instead thinks we’re still at the very, very early days and the capital influx has just started.
 
 ## Testing
-Automated tests are in progress, but a manual integration test can be run. Note, this test matches addresses from my Ganache instance.
+### Automated Testing
+
+    truffle test
+
+### Manual Testing
+Note, this test matches addresses from my Ganache instance.
 
     $ truffle compile
     $ truffle migrate
@@ -27,17 +32,45 @@ Automated tests are in progress, but a manual integration test can be run. Note,
 
     ttb.payout()
 
-    // Other tests
-    ttb.personalAbort({from: "0xf17f52151EbEF6C7334FAD080c5704D77216b732"})
-
-
 ## Usage
+### Owner
+See the [deployment](#deployment) section.
+
+### Bettor (Draft)
+
+- call fund()
+- wait
+- call oracleVote(vote)
+  - Ari: 0
+  - Stefano: 1
+- call payout()
+
+## Deployment
+TBD
 
 ## Documentation
+
+### State Machine
 The state machine is as follows:
 
     setup -> fund -> (implicit wait) -> vote -> payout -> end
 
 
-### expiryDate
+### VoteOption
+Since VoteOption is an enum, the votes are encoded. A vote for Ari is `0`, and a vote for Stefano is `1`.
+
+### Expiry Date
 After the `expiryDate`, both bettors can call `personalAbort()` to recover their funds. Please note that after the expiry date, a bettor that knows they've lost the vote can call `personalAbort()` to recover their funds. Both parties must be vigilant about calling `payout()` after `endDate` and before `expiryDate`.
+
+
+## Discussion
+- Should an oracle be allowed to revote as long as a quorum isn't reached?
+  - This would be a simple change and helps mitigate oracle voting errors.
+- What should we do with ETH locked up by being sent directly to the contract?
+
+
+# Notes
+- Events for transitionState
+- Could add explicit wait state, and let oracleVote transition out f time satisfies
+  - but then transition state doesn't become the only source of state changes.
+- Timed voting period
