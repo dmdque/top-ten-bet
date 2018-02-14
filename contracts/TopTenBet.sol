@@ -16,7 +16,10 @@ import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 contract TopTenBet is Ownable {
   using SafeMath for uint;
 
-  enum VoteOption {Ari, Stefano}
+  enum VoteOption {
+    Ari,  // 0
+    Stefano  // 1
+  }
   enum State {
     Setup,
     Fund,
@@ -77,19 +80,9 @@ contract TopTenBet is Ownable {
         _state = State.Vote;
       }
     } else if(_state == State.Vote) {
-      uint ariVoteCount = 0;
-      uint stefanoVoteCount = 0;
-      for (uint i = 0; i < _oracles.length; i++) {
-        VoteInfo memory voteInfo = _oracleVotes[_oracles[i]];
-        if (!voteInfo.didVote) {
-          continue;
-        }
-        if(voteInfo.vote == VoteOption.Ari) {
-          ariVoteCount = ariVoteCount.add(1);
-        } else if (voteInfo.vote == VoteOption.Stefano) {
-          stefanoVoteCount = stefanoVoteCount.add(1);
-        }
-      }
+      uint ariVoteCount;
+      uint stefanoVoteCount;
+      (ariVoteCount, stefanoVoteCount) = tallyVotes();
       if (ariVoteCount >= QUORUM || stefanoVoteCount >= QUORUM) {
         _state = State.Payout;
       }
@@ -164,18 +157,28 @@ contract TopTenBet is Ownable {
     transitionState();
   }
 
-  // Returns the winner
-  function determineWinner() internal view returns (address winner) {
-    uint ariVoteCount = 0;
-    uint stefanoVoteCount = 0;
+  // TODO: make internal before deploy
+  function tallyVotes() view returns (uint ariVoteCount, uint stefanoVoteCount) {
     for (uint i = 0; i < _oracles.length; i++) {
-      address currentOracle = _oracles[i];
-      if (_oracleVotes[currentOracle].vote == VoteOption.Ari) {
-         ariVoteCount = ariVoteCount.add(1);
-      } else if (_oracleVotes[currentOracle].vote == VoteOption.Stefano) {
+      VoteInfo memory voteInfo = _oracleVotes[_oracles[i]];
+      if (!voteInfo.didVote) {
+        continue;
+      }
+      if(voteInfo.vote == VoteOption.Ari) {
+        ariVoteCount = ariVoteCount.add(1);
+      } else if (voteInfo.vote == VoteOption.Stefano) {
         stefanoVoteCount = stefanoVoteCount.add(1);
       }
     }
+    return (ariVoteCount, stefanoVoteCount);
+  }
+
+  // Returns the winner
+  // TODO: make internal before deploy
+  function determineWinner() view returns (address winner) {
+    uint ariVoteCount;
+    uint stefanoVoteCount;
+    (ariVoteCount, stefanoVoteCount) = tallyVotes();
     if (ariVoteCount >= QUORUM) {
       return _ari;
     } else if (stefanoVoteCount >= QUORUM) {
