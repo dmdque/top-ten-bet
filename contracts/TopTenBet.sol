@@ -16,7 +16,7 @@ import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 contract TopTenBet is Ownable {
   using SafeMath for uint;
 
-  enum VoteOption {Alice, Bob}
+  enum VoteOption {Ari, Stefano}
   enum State {
     Setup,
     Fund,
@@ -32,10 +32,10 @@ contract TopTenBet is Ownable {
   }
 
   mapping (address => uint) public _balances;
-  address public _alice;
-  address public _bob;
-  address public _charityA;
-  address public _charityB;
+  address public _ari;
+  address public _stefano;
+  address public _payoutAri;
+  address public _payoutStefano;
   address[3] public _oracles;
   mapping (address => VoteInfo) public _oracleVotes;
   uint public _betAmount;
@@ -47,7 +47,7 @@ contract TopTenBet is Ownable {
   event LogUInt(uint n);
 
   modifier onlyBettor() {
-    require(msg.sender == _alice || msg.sender == _bob);
+    require(msg.sender == _ari || msg.sender == _stefano);
     _;
   }
 
@@ -72,25 +72,25 @@ contract TopTenBet is Ownable {
     if(_state == State.Setup) {
       _state = State.Fund;
     } else if(_state == State.Fund) {
-      if(_balances[_alice] == _betAmount &&
-           _balances[_bob] == _betAmount) {
+      if(_balances[_ari] == _betAmount &&
+           _balances[_stefano] == _betAmount) {
         _state = State.Vote;
       }
     } else if(_state == State.Vote) {
-      uint aliceVoteCount = 0;
-      uint bobVoteCount = 0;
+      uint ariVoteCount = 0;
+      uint stefanoVoteCount = 0;
       for (uint i = 0; i < _oracles.length; i++) {
         VoteInfo memory voteInfo = _oracleVotes[_oracles[i]];
         if (!voteInfo.didVote) {
           continue;
         }
-        if(voteInfo.vote == VoteOption.Alice) {
-          aliceVoteCount = aliceVoteCount.add(1);
-        } else if (voteInfo.vote == VoteOption.Bob) {
-          bobVoteCount = bobVoteCount.add(1);
+        if(voteInfo.vote == VoteOption.Ari) {
+          ariVoteCount = ariVoteCount.add(1);
+        } else if (voteInfo.vote == VoteOption.Stefano) {
+          stefanoVoteCount = stefanoVoteCount.add(1);
         }
       }
-      if (aliceVoteCount >= QUORUM || bobVoteCount >= QUORUM) {
+      if (ariVoteCount >= QUORUM || stefanoVoteCount >= QUORUM) {
         _state = State.Payout;
       }
     } else if(_state == State.Payout) {
@@ -99,10 +99,10 @@ contract TopTenBet is Ownable {
   }
 
   function TopTenBet(
-    address alice,
-    address bob,
-    address charityA,
-    address charityB,
+    address ari,
+    address stefano,
+    address payoutAri,
+    address payoutStefano,
     address oracle1,
     address oracle2,
     address oracle3,
@@ -110,19 +110,19 @@ contract TopTenBet is Ownable {
     uint expiryDate,
     uint betAmount
   ) public onlyOwner {
-    require(alice != address(0));
-    require(bob != address(0));
-    require(charityA != address(0));
-    require(charityB != address(0));
+    require(ari != address(0));
+    require(stefano != address(0));
+    require(payoutAri != address(0));
+    require(payoutStefano != address(0));
     require(oracle1 != address(0));
     require(oracle2 != address(0));
     require(oracle3 != address(0));
     require(expiryDate > endDate);
 
-    _alice = alice;
-    _bob = bob;
-    _charityA = charityA;
-    _charityB = charityB;
+    _ari = ari;
+    _stefano = stefano;
+    _payoutAri = payoutAri;
+    _payoutStefano = payoutStefano;
     _oracles[0] = oracle1;
     _oracles[1] = oracle2;
     _oracles[2] = oracle3;
@@ -146,7 +146,7 @@ contract TopTenBet is Ownable {
     transitionState();
   }
 
-  // Allow _oracles to vote for Alice or Bob
+  // Allow oracles to vote for Ari or Stefano
   // Oracles can only vote once
 
   /// @notice
@@ -166,24 +166,24 @@ contract TopTenBet is Ownable {
 
   // Returns the winner
   function determineWinner() internal view returns (address winner) {
-    uint aliceVoteCount = 0;
-    uint bobVoteCount = 0;
+    uint ariVoteCount = 0;
+    uint stefanoVoteCount = 0;
     for (uint i = 0; i < _oracles.length; i++) {
       address currentOracle = _oracles[i];
-      if (_oracleVotes[currentOracle].vote == VoteOption.Alice) {
-         aliceVoteCount = aliceVoteCount.add(1);
-      } else if (_oracleVotes[currentOracle].vote == VoteOption.Bob) {
-        bobVoteCount = bobVoteCount.add(1);
+      if (_oracleVotes[currentOracle].vote == VoteOption.Ari) {
+         ariVoteCount = ariVoteCount.add(1);
+      } else if (_oracleVotes[currentOracle].vote == VoteOption.Stefano) {
+        stefanoVoteCount = stefanoVoteCount.add(1);
       }
     }
-    if (aliceVoteCount >= QUORUM) {
-      return _alice;
-    } else if (bobVoteCount >= QUORUM) {
-      return _bob;
+    if (ariVoteCount >= QUORUM) {
+      return _ari;
+    } else if (stefanoVoteCount >= QUORUM) {
+      return _stefano;
     }
   }
 
-  // Settles the bet between _alice and _bob by counting votes made by _oracles
+  // Settles the bet between ari and stefano by counting votes made by oracles
   // Returns whether the payout is a success
   // is there a way to auto trigger this once the time has elapsed?
   function payout()
@@ -192,15 +192,15 @@ contract TopTenBet is Ownable {
   {
     address winner = determineWinner();
     address winnerPayout;
-    if (winner == _alice) {
-      winnerPayout = _charityA;
-    } else if (winner == _bob) {
-      winnerPayout = _charityB;
+    if (winner == _ari) {
+      winnerPayout = _payoutAri;
+    } else if (winner == _stefano) {
+      winnerPayout = _payoutStefano;
     }
     assert(winnerPayout != address(0));
 
-    _balances[_alice] = 0;
-    _balances[_bob] = 0;
+    _balances[_ari] = 0;
+    _balances[_stefano] = 0;
     winnerPayout.transfer(this.balance);
     transitionState();
   }
@@ -211,12 +211,12 @@ contract TopTenBet is Ownable {
     onlyOwner
   {
     // Update balances before transferring
-    uint aliceAmount = _balances[_alice];
-    uint bobAmount = _balances[_bob];
-    _balances[_alice] = 0;
-    _balances[_bob] = 0;
-    _alice.transfer(aliceAmount);
-    _bob.transfer(bobAmount);
+    uint ariAmount = _balances[_ari];
+    uint stefanoAmount = _balances[_stefano];
+    _balances[_ari] = 0;
+    _balances[_stefano] = 0;
+    _ari.transfer(ariAmount);
+    _stefano.transfer(stefanoAmount);
     _state = State.End;
   }
 

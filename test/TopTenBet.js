@@ -7,7 +7,7 @@ const BigNumber = web3.BigNumber;
 
 var topTenBet;
 
-contract('TopTenBet', function([owner, alice, bob, charityA, charityB, oracle1, oracle2, oracle3]) {
+contract('TopTenBet', function([owner, ari, stefano, payoutAri, payoutStefano, oracle1, oracle2, oracle3]) {
 
   // Setup
   let nowDate = new Date();
@@ -19,10 +19,10 @@ contract('TopTenBet', function([owner, alice, bob, charityA, charityB, oracle1, 
   beforeEach(async () => {
     try {
       topTenBet = await TopTenBet.new(
-        alice,
-        bob,
-        charityA,
-        charityB,
+        ari,
+        stefano,
+        payoutAri,
+        payoutStefano,
         oracle1,
         oracle2,
         oracle3,
@@ -44,57 +44,57 @@ contract('TopTenBet', function([owner, alice, bob, charityA, charityB, oracle1, 
   });
 
   it('should fund bettors and advance the state', async () => {
-    await topTenBet.fund({from: alice, value: betAmount});
-    await topTenBet.fund({from: bob, value: betAmount});
+    await topTenBet.fund({from: ari, value: betAmount});
+    await topTenBet.fund({from: stefano, value: betAmount});
 
-    let aliceBalance = await topTenBet._balances(alice);
-    let bobBalance = await topTenBet._balances(bob);
+    let ariBalance = await topTenBet._balances(ari);
+    let stefanoBalance = await topTenBet._balances(stefano);
     let state = await topTenBet._state();
 
-    assert.equal(aliceBalance.toNumber(), betAmount);
-    assert.equal(bobBalance.toNumber(), betAmount);
+    assert.equal(ariBalance.toNumber(), betAmount);
+    assert.equal(stefanoBalance.toNumber(), betAmount);
     assert.equal(state, 2);
   });
 
   it('should not fund a bettor more than once', async () => {
-    await topTenBet.fund({from: alice, value: betAmount});
+    await topTenBet.fund({from: ari, value: betAmount});
     // todo: assert throw
-    await topTenBet.fund({from: alice, value: betAmount});
+    await topTenBet.fund({from: ari, value: betAmount});
 
-    let aliceBalance = await topTenBet._balances(alice);
+    let ariBalance = await topTenBet._balances(ari);
 
-    assert.equal(aliceBalance.toNumber(), betAmount);
+    assert.equal(ariBalance.toNumber(), betAmount);
   });
 
   it('should not fund a bettor an amount other than betAmount', async () => {
     // todo: assert throw
-    await topTenBet.fund({from: alice, value: 5*10**18});
+    await topTenBet.fund({from: ari, value: 5*10**18});
 
-    let aliceBalance = await topTenBet._balances(alice);
+    let ariBalance = await topTenBet._balances(ari);
 
-    assert.equal(aliceBalance.toNumber(), 0);
+    assert.equal(ariBalance.toNumber(), 0);
   });
 
 
-  // only alice and bob can fund
+  // only ari and stefano can fund
   // # Integration tests
 
   it('should work for happy case', async () => {
-    let charityABalance = await web3.eth.getBalance(charityA);
-    let charityBBalance = await web3.eth.getBalance(charityB);
+    let payoutAriBalance = await web3.eth.getBalance(payoutAri);
+    let payoutStefanoBalance = await web3.eth.getBalance(payoutStefano);
 
-    await topTenBet.fund({from: alice, value: betAmount});
-    await topTenBet.fund({from: bob, value: betAmount});
+    await topTenBet.fund({from: ari, value: betAmount});
+    await topTenBet.fund({from: stefano, value: betAmount});
     await topTenBet.oracleVote(0, {from: oracle1});
     await topTenBet.oracleVote(0, {from: oracle2});
     await topTenBet.oracleVote(0, {from: oracle3});
     await topTenBet.payout()
 
-    let aliceBalance = await topTenBet._balances(alice);
-    let charityAFinalBalance = await web3.eth.getBalance(charityA);
-    let charityBFinalBalance = await web3.eth.getBalance(charityB);
+    let ariBalance = await topTenBet._balances(ari);
+    let payoutAriFinalBalance = await web3.eth.getBalance(payoutAri);
+    let payoutStefanoFinalBalance = await web3.eth.getBalance(payoutStefano);
 
-    assert.equal(charityAFinalBalance.toNumber() - charityABalance.toNumber(), 2 * betAmount);
+    assert.equal(payoutAriFinalBalance.toNumber() - payoutAriBalance.toNumber(), 2 * betAmount);
   });
 
 });
