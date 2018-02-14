@@ -39,7 +39,7 @@ contract('TopTenBet', function([owner, alice, bob, charityA, charityB, oracle1, 
   // # Unit tests
 
   it('should be properly initialized', async () => {
-    let state = await topTenBet.state();
+    let state = await topTenBet._state();
     assert.equal(state.toNumber(), new BigNumber(1));
   });
 
@@ -47,9 +47,9 @@ contract('TopTenBet', function([owner, alice, bob, charityA, charityB, oracle1, 
     await topTenBet.fund({from: alice, value: betAmount});
     await topTenBet.fund({from: bob, value: betAmount});
 
-    let aliceBalance = await topTenBet.balances(alice);
-    let bobBalance = await topTenBet.balances(bob);
-    let state = await topTenBet.state();
+    let aliceBalance = await topTenBet._balances(alice);
+    let bobBalance = await topTenBet._balances(bob);
+    let state = await topTenBet._state();
 
     assert.equal(aliceBalance.toNumber(), betAmount);
     assert.equal(bobBalance.toNumber(), betAmount);
@@ -61,7 +61,7 @@ contract('TopTenBet', function([owner, alice, bob, charityA, charityB, oracle1, 
     // todo: assert throw
     await topTenBet.fund({from: alice, value: betAmount});
 
-    let aliceBalance = await topTenBet.balances(alice);
+    let aliceBalance = await topTenBet._balances(alice);
 
     assert.equal(aliceBalance.toNumber(), betAmount);
   });
@@ -70,11 +70,13 @@ contract('TopTenBet', function([owner, alice, bob, charityA, charityB, oracle1, 
     // todo: assert throw
     await topTenBet.fund({from: alice, value: 5*10**18});
 
-    let aliceBalance = await topTenBet.balances(alice);
+    let aliceBalance = await topTenBet._balances(alice);
 
     assert.equal(aliceBalance.toNumber(), 0);
   });
 
+
+  // only alice and bob can fund
   // # Integration tests
 
   it('should work for happy case', async () => {
@@ -88,12 +90,10 @@ contract('TopTenBet', function([owner, alice, bob, charityA, charityB, oracle1, 
     await topTenBet.oracleVote(0, {from: oracle3});
     await topTenBet.payout()
 
-    let aliceBalance = await topTenBet.balances(alice);
+    let aliceBalance = await topTenBet._balances(alice);
     let charityAFinalBalance = await web3.eth.getBalance(charityA);
     let charityBFinalBalance = await web3.eth.getBalance(charityB);
 
-    console.log(charityABalance.toNumber() - charityAFinalBalance.toNumber());
-    console.log(charityBBalance.toNumber() - charityBFinalBalance.toNumber());
     assert.equal(charityAFinalBalance.toNumber() - charityABalance.toNumber(), 2 * betAmount);
   });
 

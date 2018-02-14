@@ -31,104 +31,104 @@ contract TopTenBet is Ownable {
     VoteOption vote;
   }
 
-  mapping (address => uint) public balances;
-  address public alice;
-  address public bob;
-  address public charityA;
-  address public charityB;
-  address[3] public oracles;
-  mapping (address => VoteInfo) public oracleVotes;
-  uint public betAmount;
-  uint public endDate;
-  uint public expiryDate;
-  State public state;
+  mapping (address => uint) public _balances;
+  address public _alice;
+  address public _bob;
+  address public _charityA;
+  address public _charityB;
+  address[3] public _oracles;
+  mapping (address => VoteInfo) public _oracleVotes;
+  uint public _betAmount;
+  uint public _endDate;
+  uint public _expiryDate;
+  State public _state;
   uint QUORUM = 2;
 
   event LogUInt(uint n);
 
   modifier onlyBettor() {
-    require(msg.sender == alice || msg.sender == bob);
+    require(msg.sender == _alice || msg.sender == _bob);
     _;
   }
 
   modifier onlyOracle() {
-    require(msg.sender == oracles[0] ||
-            msg.sender == oracles[1] ||
-            msg.sender == oracles[2]);
+    require(msg.sender == _oracles[0] ||
+            msg.sender == _oracles[1] ||
+            msg.sender == _oracles[2]);
     _;
   }
 
   modifier onlyAfterEndDate() {
-    require(now > endDate);
+    require(now > _endDate);
     _;
   }
 
-  modifier onlyState(State _state) {
-    require(state == _state);
+  modifier onlyState(State state) {
+    require(_state == state);
     _;
   }
 
   function transitionState() internal {
-    if(state == State.Setup) {
-      state = State.Fund;
-    } else if(state == State.Fund) {
-      if(balances[alice] == betAmount &&
-           balances[bob] == betAmount) {
-        state = State.Vote;
+    if(_state == State.Setup) {
+      _state = State.Fund;
+    } else if(_state == State.Fund) {
+      if(_balances[_alice] == _betAmount &&
+           _balances[_bob] == _betAmount) {
+        _state = State.Vote;
       }
-    } else if(state == State.Vote) {
-      uint _aliceVoteCount = 0;
-      uint _bobVoteCount = 0;
-      for (uint i = 0; i < oracles.length; i++) {
-        address voteInfo = oracleVotes[oracles[i]];
+    } else if(_state == State.Vote) {
+      uint aliceVoteCount = 0;
+      uint bobVoteCount = 0;
+      for (uint i = 0; i < _oracles.length; i++) {
+        VoteInfo memory voteInfo = _oracleVotes[_oracles[i]];
         if (!voteInfo.didVote) {
           continue;
         }
         if(voteInfo.vote == VoteOption.Alice) {
-          _aliceVoteCount = _aliceVoteCount.add(1);
+          aliceVoteCount = aliceVoteCount.add(1);
         } else if (voteInfo.vote == VoteOption.Bob) {
-          _bobVoteCount = _bobVoteCount.add(1);
+          bobVoteCount = bobVoteCount.add(1);
         }
       }
-      if (_aliceVoteCount >= QUORUM || _bobVoteCount >= QUORUM) {
-        state = State.Payout;
+      if (aliceVoteCount >= QUORUM || bobVoteCount >= QUORUM) {
+        _state = State.Payout;
       }
-    } else if(state == State.Payout) {
-      state = State.End;
+    } else if(_state == State.Payout) {
+      _state = State.End;
     }
   }
 
   function TopTenBet(
-    address _alice,
-    address _bob,
-    address _charityA,
-    address _charityB,
-    address _oracle1,
-    address _oracle2,
-    address _oracle3,
-    uint _endDate,
-    uint _expiryDate,
-    uint _betAmount
+    address alice,
+    address bob,
+    address charityA,
+    address charityB,
+    address oracle1,
+    address oracle2,
+    address oracle3,
+    uint endDate,
+    uint expiryDate,
+    uint betAmount
   ) public onlyOwner {
-    require(_alice != address(0));
-    require(_bob != address(0));
-    require(_charityA != address(0));
-    require(_charityB != address(0));
-    require(_oracle1 != address(0));
-    require(_oracle2 != address(0));
-    require(_oracle3 != address(0));
-    require(_expiryDate > _endDate);
+    require(alice != address(0));
+    require(bob != address(0));
+    require(charityA != address(0));
+    require(charityB != address(0));
+    require(oracle1 != address(0));
+    require(oracle2 != address(0));
+    require(oracle3 != address(0));
+    require(expiryDate > endDate);
 
-    alice = _alice;
-    bob = _bob;
-    charityA = _charityA;
-    charityB = _charityB;
-    oracles[0] = _oracle1;
-    oracles[1] = _oracle2;
-    oracles[2] = _oracle3;
-    betAmount = _betAmount;
-    endDate = _endDate;
-    expiryDate = _expiryDate;
+    _alice = alice;
+    _bob = bob;
+    _charityA = charityA;
+    _charityB = charityB;
+    _oracles[0] = oracle1;
+    _oracles[1] = oracle2;
+    _oracles[2] = oracle3;
+    _betAmount = betAmount;
+    _endDate = endDate;
+    _expiryDate = expiryDate;
 
     transitionState();
   }
@@ -140,51 +140,50 @@ contract TopTenBet is Ownable {
     onlyBettor
     onlyState(State.Fund)
   {
-    require(msg.value == betAmount);
-    require(balances[msg.sender] == 0);
-    balances[msg.sender] = msg.value;
+    require(msg.value == _betAmount);
+    require(_balances[msg.sender] == 0);
+    _balances[msg.sender] = msg.value;
     transitionState();
   }
 
-  // Allow oracles to vote for Alice or Bob
+  // Allow _oracles to vote for Alice or Bob
   // Oracles can only vote once
 
   /// @notice
   /// @dev
   /// param
-  /// @return
-  function oracleVote(VoteOption _vote)
+  function oracleVote(VoteOption vote)
     public
     onlyAfterEndDate
     onlyOracle
     onlyState(State.Vote)
   {
-    require(!oracleVotes[msg.sender].didVote);
-    oracleVotes[msg.sender] = VoteInfo(true, _vote);
+    require(!_oracleVotes[msg.sender].didVote);
+    _oracleVotes[msg.sender] = VoteInfo(true, vote);
 
     transitionState();
   }
 
   // Returns the winner
   function determineWinner() internal view returns (address winner) {
-    uint _aliceVoteCount = 0;
-    uint _bobVoteCount = 0;
-    for (uint i = 0; i < oracles.length; i++) {
-      address currentOracle = oracles[i];
-      if (oracleVotes[currentOracle].vote == VoteOption.Alice) {
-         _aliceVoteCount = _aliceVoteCount.add(1);
-      } else if (oracleVotes[currentOracle].vote == VoteOption.Bob) {
-        _bobVoteCount = _bobVoteCount.add(1);
+    uint aliceVoteCount = 0;
+    uint bobVoteCount = 0;
+    for (uint i = 0; i < _oracles.length; i++) {
+      address currentOracle = _oracles[i];
+      if (_oracleVotes[currentOracle].vote == VoteOption.Alice) {
+         aliceVoteCount = aliceVoteCount.add(1);
+      } else if (_oracleVotes[currentOracle].vote == VoteOption.Bob) {
+        bobVoteCount = bobVoteCount.add(1);
       }
     }
-    if (_aliceVoteCount >= QUORUM) {
-      return alice;
-    } else if (_bobVoteCount >= QUORUM) {
-      return bob;
+    if (aliceVoteCount >= QUORUM) {
+      return _alice;
+    } else if (bobVoteCount >= QUORUM) {
+      return _bob;
     }
   }
 
-  // Settles the bet between alice and bob by counting votes made by oracles
+  // Settles the bet between _alice and _bob by counting votes made by _oracles
   // Returns whether the payout is a success
   // is there a way to auto trigger this once the time has elapsed?
   function payout()
@@ -192,17 +191,17 @@ contract TopTenBet is Ownable {
     onlyState(State.Payout)
   {
     address winner = determineWinner();
-    address payout;
-    if (winner == alice) {
-      payout = charityA;
-    } else if (winner == bob) {
-      payout = charityB;
+    address winnerPayout;
+    if (winner == _alice) {
+      winnerPayout = _charityA;
+    } else if (winner == _bob) {
+      winnerPayout = _charityB;
     }
-    assert(payout != address(0));
+    assert(winnerPayout != address(0));
 
-    balances[alice] = 0;
-    balances[bob] = 0;
-    payout.transfer(this.balance);
+    _balances[_alice] = 0;
+    _balances[_bob] = 0;
+    winnerPayout.transfer(this.balance);
     transitionState();
   }
 
@@ -212,22 +211,22 @@ contract TopTenBet is Ownable {
     onlyOwner
   {
     // Update balances before transferring
-    uint aliceAmount = balances[alice];
-    uint bobAmount = balances[bob];
-    balances[alice] = 0;
-    balances[bob] = 0;
-    alice.transfer(aliceAmount);
-    bob.transfer(bobAmount);
-    state = State.End;
+    uint aliceAmount = _balances[_alice];
+    uint bobAmount = _balances[_bob];
+    _balances[_alice] = 0;
+    _balances[_bob] = 0;
+    _alice.transfer(aliceAmount);
+    _bob.transfer(bobAmount);
+    _state = State.End;
   }
 
   // Refunds balance to bettor
   function personalAbort() public onlyBettor {
-    require(now >= expiryDate);
-    uint amount = balances[msg.sender];
-    balances[msg.sender] = 0;
+    require(now >= _expiryDate);
+    uint amount = _balances[msg.sender];
+    _balances[msg.sender] = 0;
     msg.sender.transfer(amount);
-    state = State.End;
+    _state = State.End;
   }
 
 }
