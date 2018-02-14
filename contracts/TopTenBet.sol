@@ -11,6 +11,8 @@ import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 // - events
 
 // Bet that top 10 market cap will shift by next year.
+/// @title TopTenBet
+/// @author dmdque
 contract TopTenBet is Ownable {
   using SafeMath for uint;
 
@@ -40,6 +42,7 @@ contract TopTenBet is Ownable {
   uint public endDate;
   uint public expiryDate;
   State public state;
+  uint QUORUM = 2;
 
   event LogUInt(uint n);
 
@@ -65,9 +68,8 @@ contract TopTenBet is Ownable {
     _;
   }
 
-  function advanceState() internal {
+  function transitionState() internal {
     if(state == State.Setup) {
-      // TODO: should we assert values here?
       state = State.Fund;
     } else if(state == State.Fund) {
       if(balances[alice] == betAmount &&
@@ -75,12 +77,22 @@ contract TopTenBet is Ownable {
         state = State.Vote;
       }
     } else if(state == State.Vote) {
+      uint _aliceVoteCount = 0;
+      uint _bobVoteCount = 0;
       for (uint i = 0; i < oracles.length; i++) {
-        if(!oracleVotes[oracles[i]].didVote) {
-          return;
+        address voteInfo = oracleVotes[oracles[i]];
+        if (!voteInfo.didVote) {
+          continue;
+        }
+        if(voteInfo.vote == VoteOption.Alice) {
+          _aliceVoteCount = _aliceVoteCount.add(1);
+        } else if (voteInfo.vote == VoteOption.Bob) {
+          _bobVoteCount = _bobVoteCount.add(1);
         }
       }
-      state = State.Payout;
+      if (_aliceVoteCount >= QUORUM || _bobVoteCount >= QUORUM) {
+        state = State.Payout;
+      }
     } else if(state == State.Payout) {
       state = State.End;
     }
@@ -118,7 +130,7 @@ contract TopTenBet is Ownable {
     endDate = _endDate;
     expiryDate = _expiryDate;
 
-    advanceState();
+    transitionState();
   }
 
   // Funds contract with bettor's bet
@@ -130,17 +142,17 @@ contract TopTenBet is Ownable {
   {
     require(msg.value == betAmount);
     require(balances[msg.sender] == 0);
-    if (msg.sender == alice) {
-      balances[alice] = msg.value;
-      advanceState();
-    } else if (msg.sender == bob) {
-      balances[bob] = msg.value;
-      advanceState();
-    }
+    balances[msg.sender] = msg.value;
+    transitionState();
   }
 
   // Allow oracles to vote for Alice or Bob
   // Oracles can only vote once
+
+  /// @notice
+  /// @dev
+  /// param
+  /// @return
   function oracleVote(VoteOption _vote)
     public
     onlyAfterEndDate
@@ -150,7 +162,7 @@ contract TopTenBet is Ownable {
     require(!oracleVotes[msg.sender].didVote);
     oracleVotes[msg.sender] = VoteInfo(true, _vote);
 
-    advanceState();
+    transitionState();
   }
 
   // Returns the winner
@@ -165,10 +177,9 @@ contract TopTenBet is Ownable {
         _bobVoteCount = _bobVoteCount.add(1);
       }
     }
-    // Outcome is binary since there's an odd number of oracles
-    if (_aliceVoteCount > _bobVoteCount) {
+    if (_aliceVoteCount >= QUORUM) {
       return alice;
-    } else {
+    } else if (_bobVoteCount >= QUORUM) {
       return bob;
     }
   }
@@ -181,17 +192,18 @@ contract TopTenBet is Ownable {
     onlyState(State.Payout)
   {
     address winner = determineWinner();
+    address payout;
     if (winner == alice) {
-      charityA.transfer(this.balance);
-      balances[alice] = 0;
-      balances[bob] = 0;
-      advanceState();
+      payout = charityA;
     } else if (winner == bob) {
-      charityB.transfer(this.balance);
-      balances[alice] = 0;
-      balances[bob] = 0;
-      advanceState();
+      payout = charityB;
     }
+    assert(payout != address(0));
+
+    balances[alice] = 0;
+    balances[bob] = 0;
+    payout.transfer(this.balance);
+    transitionState();
   }
 
   // Refunds balances to bettors
