@@ -47,7 +47,9 @@ contract TopTenBet is Ownable {
   State public _state;
   uint QUORUM = 2;
 
-  event LogUInt(uint n);
+  event Fund(address bettor, uint amount);
+  event Vote(address oracle, VoteOption vote);
+  event Payout(address winner, address winnerPayout, uint amount);
 
   modifier onlyBettor() {
     require(msg.sender == _ari || msg.sender == _stefano);
@@ -102,7 +104,7 @@ contract TopTenBet is Ownable {
     uint endDate,
     uint expiryDate,
     uint betAmount
-  ) public onlyOwner {
+  ) public {
     require(ari != address(0));
     require(stefano != address(0));
     require(payoutAri != address(0));
@@ -136,6 +138,7 @@ contract TopTenBet is Ownable {
     require(msg.value == _betAmount);
     require(_balances[msg.sender] == 0);
     _balances[msg.sender] = msg.value;
+    Fund(msg.sender, msg.value);
     transitionState();
   }
 
@@ -153,7 +156,7 @@ contract TopTenBet is Ownable {
   {
     require(!_oracleVotes[msg.sender].didVote);
     _oracleVotes[msg.sender] = VoteInfo(true, vote);
-
+    Vote(msg.sender, vote);
     transitionState();
   }
 
@@ -202,34 +205,42 @@ contract TopTenBet is Ownable {
     }
     assert(winnerPayout != address(0));
 
+    uint payoutAmount = this.balance;
     _balances[_ari] = 0;
     _balances[_stefano] = 0;
-    winnerPayout.transfer(this.balance);
+    winnerPayout.transfer(payoutAmount);
+    Payout(winner, winnerPayout, payoutAmount);
     transitionState();
   }
 
   // Refunds balances to bettors
-  function abort()
-    public
-    onlyOwner
-  {
-    // Update balances before transferring
-    uint ariAmount = _balances[_ari];
-    uint stefanoAmount = _balances[_stefano];
+  function refund() internal {
+    uint ariRefund = _balances[_ari];
+    uint stefanoRefund = _balances[_stefano];
     _balances[_ari] = 0;
     _balances[_stefano] = 0;
-    _ari.transfer(ariAmount);
-    _stefano.transfer(stefanoAmount);
+    _ari.transfer(ariRefund);
+    _stefano.transfer(stefanoRefund);
+  }
+
+  // Refund in case no quorum is reached
+  function expiryRefund()
+    external
+    onlyBettor
+    onlyState(State.Vote)
+  {
+    require(now >= _expiryDate);
+    refund();
     _state = State.End;
   }
 
-  // Refunds balance to bettor
-  function personalAbort() public onlyBettor {
-    require(now >= _expiryDate);
-    uint amount = _balances[msg.sender];
-    _balances[msg.sender] = 0;
-    msg.sender.transfer(amount);
+  // Refund for catastrophic scenario
+  function panicRefund()
+    external
+    onlyOwner
+   {
+     refund();
     _state = State.End;
-  }
+   }
 
 }
