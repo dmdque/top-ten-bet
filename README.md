@@ -64,9 +64,7 @@ After the `expiryDate`, both bettors can call `personalAbort()` to recover their
 
 
 ## Discussion
-- Should an oracle be allowed to revote as long as a quorum isn't reached?
-  - This would be a simple change and helps mitigate oracle voting errors.
-- What should we do with ETH locked up by being sent directly to the contract?
+- `panicRefund()` can be removed at the request of TE.
 
 
 # Notes

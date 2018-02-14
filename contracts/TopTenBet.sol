@@ -143,18 +143,13 @@ contract TopTenBet is Ownable {
   }
 
   // Allow oracles to vote for Ari or Stefano
-  // Oracles can only vote once
-
-  /// @notice
-  /// @dev
-  /// param
+  // Oracles can alter their vote as long as a quorum hasn't been reached
   function oracleVote(VoteOption vote)
     public
     onlyAfterEndDate
     onlyOracle
     onlyState(State.Vote)
   {
-    require(!_oracleVotes[msg.sender].didVote);
     _oracleVotes[msg.sender] = VoteInfo(true, vote);
     Vote(msg.sender, vote);
     transitionState();
