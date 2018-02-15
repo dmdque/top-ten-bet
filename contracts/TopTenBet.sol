@@ -10,9 +10,9 @@ import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 // - do mappings take more storage space than 3 arrays?
 // - events
 
-// Bet that top 10 market cap will shift by next year.
 /// @title TopTenBet
 /// @author dmdque
+/// @notice Bet that top 10 market cap will shift by next year between Ari and Stefano
 contract TopTenBet is Ownable {
   using SafeMath for uint;
 
@@ -93,6 +93,16 @@ contract TopTenBet is Ownable {
     }
   }
 
+  /// @param ari Ari's address
+  /// @param stefano Stefano's address
+  /// @param payoutAri Address where payout should go if Ari wins
+  /// @param stefano Address where payout should go if Stefano wins
+  /// @param oracle1 First oracle's address (2 of 3 are Ari and Stefano)
+  /// @param oracle2 Second oracle's address (2 of 3 are Ari and Stefano)
+  /// @param oracle3 Third oracle's address (2 of 3 are Ari and Stefano)
+  /// @param endDate The datetime that the three oracles can begin voting for the winner
+  /// @param expiryDate The datetime after which the bettors can withdraw their money, a suggested value for this is a week or two
+  /// @param betAmount The exact amount that each party has to bet
   function TopTenBet(
     address ari,
     address stefano,
@@ -128,7 +138,8 @@ contract TopTenBet is Ownable {
     transitionState();
   }
 
-  // Funds contract with bettor's bet
+  /// @notice For the bettors, this function lets you fund the contract - and requires that you send the exact amount required
+  /// @notice Once both parties call this, the bet is active
   function fund()
     public
     payable
@@ -142,8 +153,9 @@ contract TopTenBet is Ownable {
     transitionState();
   }
 
-  // Allow oracles to vote for Ari or Stefano
-  // Oracles can alter their vote as long as a quorum hasn't been reached
+  /// @notice Allow the three oracles to vote for Ari or Stefano (2 of the 3 are Ari and Stefano)
+  /// @notice Oracles can alter their vote as long as a quorum hasn't been reached
+  /// @param vote Vote is an enum where 0 indicates Ari wins and 1 indicates Stefano wins
   function oracleVote(VoteOption vote)
     public
     onlyAfterEndDate
@@ -184,9 +196,9 @@ contract TopTenBet is Ownable {
     }
   }
 
-  // Settles the bet between ari and stefano by counting votes made by oracles
-  // Returns whether the payout is a success
-  // is there a way to auto trigger this once the time has elapsed?
+  /// @notice Settles the bet between Ari and Stefano by counting votes made by the three oracles
+  /// @notice At the end, the winner is paid the total balance in the contract
+  // TODO: is there a way to auto trigger this once the time has elapsed?
   function payout()
     public
     onlyState(State.Payout)
@@ -218,7 +230,8 @@ contract TopTenBet is Ownable {
     _stefano.transfer(stefanoRefund);
   }
 
-  // Refund in case no quorum is reached
+  /// @notice Refund in case no quorum is reached. Only Stefano or Ari can call this, once the expiry date has been reached
+  /// @notice Both initial bets are refunded if this is called
   function expiryRefund()
     external
     onlyBettor
@@ -229,7 +242,8 @@ contract TopTenBet is Ownable {
     _state = State.End;
   }
 
-  // Refund for catastrophic scenario
+  /// @notice Refund for catastrophic scenario, only owner can call this - but at anytime
+  /// @notice Funds are returned to Ari and Stefano
   function panicRefund()
     external
     onlyOwner
