@@ -156,8 +156,8 @@ contract TopTenBet is Ownable {
   }
 
   // TODO: make internal before deploy
-  function tallyVotes() view returns (uint ariVoteCount, uint stefanoVoteCount) {
-    for (uint i = 0; i < _oracles.length; i++) {
+  function tallyVotes() view returns (uint8 ariVoteCount, uint8 stefanoVoteCount) {
+    for (uint8 i = 0; i < _oracles.length; i++) {
       VoteInfo memory voteInfo = _oracleVotes[_oracles[i]];
       if (!voteInfo.didVote) {
         continue;
