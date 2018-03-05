@@ -4,13 +4,12 @@ const TopTenBet = artifacts.require('TopTenBet');
 
 const BigNumber = web3.BigNumber;
 
-var topTenBet;
-
 contract('TopTenBet', function([owner, ari, stefano, payoutAri, payoutStefano, oracle1, oracle2, oracle3, stranger1]) {
 
   // Setup
+  let topTenBet;
   let nowDate = new Date();
-  // endDate is in the past to ensure
+  // endDate is in the past to ensure tests can pass
   let endDate = parseInt(new Date(nowDate.getTime() - 30*1000).getTime() / 1000);
   let expiryDate = parseInt(new Date(nowDate.getTime() + 5*60*1000).getTime() / 1000);
   let betAmount = 1*10**18;

@@ -72,12 +72,12 @@ contract TopTenBet is Ownable {
   function transitionState() internal {
     if(_state == State.Setup) {
       _state = State.Fund;
-      TransitionState(State.Setup, _state);
+      TransitionState(State.Setup, State.Fund);
     } else if(_state == State.Fund) {
       if(_balances[_ari] == _betAmount &&
            _balances[_stefano] == _betAmount) {
         _state = State.Vote;
-        TransitionState(State.Fund, _state);
+        TransitionState(State.Fund, State.Vote);
       }
     } else if(_state == State.Vote) {
       uint ariVoteCount;
@@ -85,11 +85,11 @@ contract TopTenBet is Ownable {
       (ariVoteCount, stefanoVoteCount) = tallyVotes();
       if (ariVoteCount >= QUORUM || stefanoVoteCount >= QUORUM) {
         _state = State.Payout;
-        TransitionState(State.Vote, _state);
+        TransitionState(State.Vote, State.Payout);
       }
     } else if(_state == State.Payout) {
       _state = State.End;
-      TransitionState(State.Payout, _state);
+      TransitionState(State.Payout, State.End);
     }
   }
 
@@ -167,8 +167,9 @@ contract TopTenBet is Ownable {
     transitionState();
   }
 
-  // TODO: make internal before deploy
-  function tallyVotes() view returns (uint ariVoteCount, uint stefanoVoteCount) {
+  /// @dev Tallies votes and returns the result
+  /// @return (ariVoteCount, stefanoVoteCount) The number of votes for each bettor
+  function tallyVotes() internal view returns (uint ariVoteCount, uint stefanoVoteCount) {
     for (uint i = 0; i < _oracles.length; i++) {
       VoteInfo memory voteInfo = _oracleVotes[_oracles[i]];
       if (!voteInfo.didVote) {
@@ -183,9 +184,9 @@ contract TopTenBet is Ownable {
     return (ariVoteCount, stefanoVoteCount);
   }
 
-  // Returns the winner
-  // TODO: make internal before deploy
-  function determineWinner() view returns (address winner) {
+  /// @dev Returns the winner
+  /// @return winner Address of the winner
+  function determineWinner() internal view returns (address winner) {
     uint ariVoteCount;
     uint stefanoVoteCount;
     (ariVoteCount, stefanoVoteCount) = tallyVotes();
@@ -198,7 +199,6 @@ contract TopTenBet is Ownable {
 
   /// @notice Settles the bet between Ari and Stefano by counting votes made by the three oracles
   /// @notice At the end, the winner is paid the total balance in the contract
-  // TODO: is there a way to auto trigger this once the time has elapsed?
   function payout()
     public
     onlyState(State.Payout)
@@ -220,7 +220,7 @@ contract TopTenBet is Ownable {
     transitionState();
   }
 
-  // Refunds balances to bettors
+  /// @dev Refunds balances to bettors
   function refund() internal {
     uint ariRefund = _balances[_ari];
     uint stefanoRefund = _balances[_stefano];
@@ -239,6 +239,7 @@ contract TopTenBet is Ownable {
   {
     require(now >= _expiryDate);
     refund();
+    TransitionState(_state, State.End);
     _state = State.End;
   }
 
@@ -247,9 +248,10 @@ contract TopTenBet is Ownable {
   function panicRefund()
     external
     onlyOwner
-   {
-     refund();
-    _state = State.End;
+    {
+      refund();
+      TransitionState(_state, State.End);
+      _state = State.End;
    }
 
 }

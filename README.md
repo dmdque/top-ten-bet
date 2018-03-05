@@ -10,13 +10,68 @@ https://tokeneconomy.co/token-economy-30-gazing-into-the-crypstal-ball-3a02cf9fe
 >
 > Yannick instead thinks we’re still at the very, very early days and the capital influx has just started.
 
+## Documentation
+This smart contract sets up a bet between Ari and Stefano. The smart contract is set up as a state machine which transitions from setup to end.
+
+### State Machine
+The state machine is as follows:
+
+    setup -> fund -> (implicit wait) -> vote -> payout -> end
+
+### VoteOption
+Since VoteOption is an enum, the votes are encoded. A vote for Ari is `0`, and a vote for Stefano is `1`.
+
+### Expiry Date
+After the `expiryDate` has passed, either bettor can call `expiryRefund()` to recover their funds. This is meant to be used if a quorum can't be reached for reasons such as an oracle losing their keys.
+
+Note that after the expiry date, a dishonest bettor that knows they've lost the vote can call `expiryRefund()` to recover their funds. For this reason, it's important that oracles vote and `payout()` is called in a timely manner.
+
+### Panic Refund
+The `onlyOwner` method `panicRefund` is implemented to mitigate unforeseen complications. It can be removed if unwanted.
+
+## Deployment
+- Run `npm install`
+- Deploy with a tool like Remix
+  - Use `truffle-flattener contracts/TopTenBet.sol | pbcopy` (macOS) to copy contract code
+  - Example constructor arguments:
+
+    ```
+    "0x1",  // ari
+    "0x2",  // stefano
+    "0x3",  // payoutAri
+    "0x4",  // payoutStefano
+    "0x5",  // oracle1
+    "0x6",  // oracle2
+    "0x7",  // oracle 3
+    "1546300800",  // endDate (2019-01-01)
+    "1548979200",  // expiryDate (2019-02-01)
+    "10000000000000000000"  // 10 ETH in wei
+    ```
+
+## Usage
+Use a tool like Remix to interact with the contract.
+
+### Bettor
+- Call `fund()` with 10 ETH
+- Wait for `endDate`
+- Wait for oracles to vote
+- Call `payout()`
+
+If no quorum is reached after `expiryDate`, call `expiryRefund()` to retrieve funds.
+
+### Oracle
+- Wait for `endDate`
+- Call `oracleVote(vote)`
+  - Vote for Ari: 0
+  - Vote for Stefano: 1
+
 ## Testing
 ### Automated Testing
 
     truffle test
 
-### Manual Testing
-Note, this test matches addresses from my Ganache instance.
+### Manual Testing Reference
+Addresses are from the local Ganache instance.
 
     $ truffle compile
     $ truffle migrate
@@ -32,43 +87,7 @@ Note, this test matches addresses from my Ganache instance.
 
     ttb.payout()
 
-## Usage
-### Bettor (Draft)
-
-- call fund()
-- wait
-- call oracleVote(vote)
-  - Ari: 0
-  - Stefano: 1
-- call payout()
-
-## Deployment (Draft)
-
-- Run `npm install`
-- Deploy with Remix
-  - Use `truffle-flattener contracts/TopTenBet.sol | pbcopy` (macOS) to copy contract code
-
-## Documentation
-
-### State Machine
-The state machine is as follows:
-
-    setup -> fund -> (implicit wait) -> vote -> payout -> end
-
-### VoteOption
-Since VoteOption is an enum, the votes are encoded. A vote for Ari is `0`, and a vote for Stefano is `1`.
-
-### Expiry Date
-After the `expiryDate`, both bettors can call `personalAbort()` to recover their funds. Please note that after the expiry date, a bettor that knows they've lost the vote can call `personalAbort()` to recover their funds. Both parties must be vigilant about calling `payout()` after `endDate` and before `expiryDate`.
-
-## Discussion
-- `panicRefund()` can be removed at the request of TE.
-
-# Future Work
+## Future Work
 - Make oracles dynamic array
 - Use time freezing library for testing
 - Timed voting period
-
-# Notes
-- Could add explicit wait state, and let oracleVote transition out f time satisfies
-  - but then transition state doesn't become the only source of state changes.
