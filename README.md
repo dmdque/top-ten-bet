@@ -33,9 +33,6 @@ Note, this test matches addresses from my Ganache instance.
     ttb.payout()
 
 ## Usage
-### Owner
-See the [deployment](#deployment) section.
-
 ### Bettor (Draft)
 
 - call fund()
@@ -45,8 +42,11 @@ See the [deployment](#deployment) section.
   - Stefano: 1
 - call payout()
 
-## Deployment
-TBD
+## Deployment (Draft)
+
+- Run `npm install`
+- Deploy with Remix
+  - Use `truffle-flattener contracts/TopTenBet.sol | pbcopy` (macOS) to copy contract code
 
 ## Documentation
 
@@ -55,20 +55,20 @@ The state machine is as follows:
 
     setup -> fund -> (implicit wait) -> vote -> payout -> end
 
-
 ### VoteOption
 Since VoteOption is an enum, the votes are encoded. A vote for Ari is `0`, and a vote for Stefano is `1`.
 
 ### Expiry Date
 After the `expiryDate`, both bettors can call `personalAbort()` to recover their funds. Please note that after the expiry date, a bettor that knows they've lost the vote can call `personalAbort()` to recover their funds. Both parties must be vigilant about calling `payout()` after `endDate` and before `expiryDate`.
 
-
 ## Discussion
 - `panicRefund()` can be removed at the request of TE.
 
+# Future Work
+- Make oracles dynamic array
+- Use time freezing library for testing
+- Timed voting period
 
 # Notes
-- Events for transitionState
 - Could add explicit wait state, and let oracleVote transition out f time satisfies
   - but then transition state doesn't become the only source of state changes.
-- Timed voting period

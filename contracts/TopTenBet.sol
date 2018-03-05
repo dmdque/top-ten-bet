@@ -5,11 +5,6 @@ import "zeppelin-solidity/contracts/math/SafeMath.sol";
 import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 
-// TODO:
-// - make oracles dynamic array
-// - do mappings take more storage space than 3 arrays?
-// - events
-
 /// @title TopTenBet
 /// @author dmdque
 /// @notice Bet that top 10 market cap will shift by next year between Ari and Stefano
@@ -50,6 +45,7 @@ contract TopTenBet is Ownable {
   event Fund(address bettor, uint amount);
   event Vote(address oracle, VoteOption vote);
   event Payout(address winner, address winnerPayout, uint amount);
+  event TransitionState(State from, State to);
 
   modifier onlyBettor() {
     require(msg.sender == _ari || msg.sender == _stefano);
@@ -76,10 +72,12 @@ contract TopTenBet is Ownable {
   function transitionState() internal {
     if(_state == State.Setup) {
       _state = State.Fund;
+      TransitionState(State.Setup, _state);
     } else if(_state == State.Fund) {
       if(_balances[_ari] == _betAmount &&
            _balances[_stefano] == _betAmount) {
         _state = State.Vote;
+        TransitionState(State.Fund, _state);
       }
     } else if(_state == State.Vote) {
       uint ariVoteCount;
@@ -87,9 +85,11 @@ contract TopTenBet is Ownable {
       (ariVoteCount, stefanoVoteCount) = tallyVotes();
       if (ariVoteCount >= QUORUM || stefanoVoteCount >= QUORUM) {
         _state = State.Payout;
+        TransitionState(State.Vote, _state);
       }
     } else if(_state == State.Payout) {
       _state = State.End;
+      TransitionState(State.Payout, _state);
     }
   }
 
@@ -168,8 +168,8 @@ contract TopTenBet is Ownable {
   }
 
   // TODO: make internal before deploy
-  function tallyVotes() view returns (uint8 ariVoteCount, uint8 stefanoVoteCount) {
-    for (uint8 i = 0; i < _oracles.length; i++) {
+  function tallyVotes() view returns (uint ariVoteCount, uint stefanoVoteCount) {
+    for (uint i = 0; i < _oracles.length; i++) {
       VoteInfo memory voteInfo = _oracleVotes[_oracles[i]];
       if (!voteInfo.didVote) {
         continue;

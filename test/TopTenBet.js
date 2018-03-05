@@ -1,5 +1,4 @@
-// TODO:
-// use time freezing library for testing
+const assertRevert = require('zeppelin-solidity/test/helpers/assertRevert.js');
 
 const TopTenBet = artifacts.require('TopTenBet');
 
@@ -58,8 +57,11 @@ contract('TopTenBet', function([owner, ari, stefano, payoutAri, payoutStefano, o
 
   it('should not fund a bettor more than once', async () => {
     await topTenBet.fund({from: ari, value: betAmount});
-    // todo: assert throw
-    await topTenBet.fund({from: ari, value: betAmount});
+    try {
+      await topTenBet.fund({from: ari, value: betAmount});
+    } catch(e) {
+      assertRevert(e);
+    }
 
     let ariBalance = await topTenBet._balances(ari);
 
@@ -67,8 +69,11 @@ contract('TopTenBet', function([owner, ari, stefano, payoutAri, payoutStefano, o
   });
 
   it('should not fund a bettor an amount other than betAmount', async () => {
-    // todo: assert throw
-    await topTenBet.fund({from: ari, value: 5*10**18});
+    try {
+      await topTenBet.fund({from: ari, value: 5*10**18});
+    } catch(e) {
+      assertRevert(e);
+    }
 
     let ariBalance = await topTenBet._balances(ari);
 
@@ -77,15 +82,18 @@ contract('TopTenBet', function([owner, ari, stefano, payoutAri, payoutStefano, o
 
 
   it('should fail to fund for a stranger', async () => {
-    let transaction = await topTenBet.fund({from: stranger1, value: betAmount});
+    let transaction;
+    try {
+      transaction = await topTenBet.fund({from: stranger1, value: betAmount});
+    } catch(e) {
+      assertRevert(e);
+    }
 
     let stranger1Balance = await topTenBet._balances(stranger1);
 
-    assert.equal(transaction.receipt.status, '0x00');
     assert.equal(stranger1Balance.toNumber(), 0);
   });
 
-  // quorum stuff
   it('should determine winner correctly with quorum', async () => {
     let payoutAriBalance = await web3.eth.getBalance(payoutAri);
     let payoutStefanoBalance = await web3.eth.getBalance(payoutStefano);
@@ -103,8 +111,18 @@ contract('TopTenBet', function([owner, ari, stefano, payoutAri, payoutStefano, o
     assert.equal(payoutAriFinalBalance.toNumber() - payoutAriBalance.toNumber(), 0);
     assert.equal(payoutStefanoFinalBalance.toNumber() - payoutStefanoBalance.toNumber(), 2 * betAmount);
   });
-  // win with 2
-  // don't win with [0, 1, novote]
+
+  it('should not payout with no quorum', async () => {
+    await topTenBet.fund({from: ari, value: betAmount});
+    await topTenBet.fund({from: stefano, value: betAmount});
+    await topTenBet.oracleVote(0, {from: oracle1});
+    await topTenBet.oracleVote(1, {from: oracle2});
+    try {
+      await topTenBet.payout()
+    } catch(e) {
+      assertRevert(e);
+    }
+  });
 
 
   // # Integration tests
@@ -117,9 +135,30 @@ contract('TopTenBet', function([owner, ari, stefano, payoutAri, payoutStefano, o
     await topTenBet.fund({from: ari, value: betAmount});
     await topTenBet.fund({from: stefano, value: betAmount});
     await topTenBet.oracleVote(0, {from: oracle1});
-    await topTenBet.oracleVote(0, {from: oracle2});
+    await topTenBet.oracleVote(1, {from: oracle2});
     await topTenBet.oracleVote(0, {from: oracle3});
-    await topTenBet.payout()
+    await topTenBet.payout();
+
+    let ariBalance = await topTenBet._balances(ari);
+    let stefanoBalance = await topTenBet._balances(stefano);
+    let payoutAriFinalBalance = await web3.eth.getBalance(payoutAri);
+    let payoutStefanoFinalBalance = await web3.eth.getBalance(payoutStefano);
+
+    assert.equal(ariBalance, 0);
+    assert.equal(stefanoBalance, 0);
+    assert.equal(payoutAriFinalBalance.toNumber() - payoutAriBalance.toNumber(), 2 * betAmount);
+    assert.equal(payoutStefanoFinalBalance.toNumber() - payoutStefanoBalance.toNumber(), 0);
+  });
+
+  it('should payout when quorum is reached', async () => {
+    let payoutAriBalance = await web3.eth.getBalance(payoutAri);
+    let payoutStefanoBalance = await web3.eth.getBalance(payoutStefano);
+
+    await topTenBet.fund({from: ari, value: betAmount});
+    await topTenBet.fund({from: stefano, value: betAmount});
+    await topTenBet.oracleVote(0, {from: oracle1});
+    await topTenBet.oracleVote(0, {from: oracle2});
+    await topTenBet.payout();
 
     let ariBalance = await topTenBet._balances(ari);
     let stefanoBalance = await topTenBet._balances(stefano);

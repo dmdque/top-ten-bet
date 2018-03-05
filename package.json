@@ -1,0 +1,26 @@
+{
+  "name": "top-ten-bet",
+  "version": "0.9.0",
+  "description": "Smart contract for bet that TokenEconomy mused about in one of their newsletters.",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "truffle-flattener": "^1.2.3",
+    "zeppelin-solidity": "^1.5.0"
+  },
+  "scripts": {
+    "test": "truffle test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dmdque/top-ten-bet.git"
+  },
+  "author": "dmdque",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dmdque/top-ten-bet/issues"
+  },
+  "homepage": "https://github.com/dmdque/top-ten-bet#readme"
+}
